@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Comparador de Precios</title>
+    <meta name="description" content="Compara precios de productos según su valor unitario por unidad de contenido.">
+    <meta name="theme-color" content="#0056b3">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Comparador">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        h1 {
+            color: #0056b3;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .product-grid {
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .grid-header, .product-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(80px, 1fr)) 1.5fr 60px; /* Adjusted columns */
+            padding: 10px;
+            gap: 10px;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+        }
+        .grid-header {
+            background-color: #e9ecef;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .product-row:last-of-type {
+            border-bottom: none;
+        }
+        .product-row input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            -moz-appearance: textfield; /* Firefox */
+        }
+        .product-row input::-webkit-outer-spin-button,
+        .product-row input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .product-row .result {
+            padding: 8px;
+            background-color: #e2f0cb;
+            border: 1px solid #a3d900;
+            border-radius: 4px;
+            text-align: right;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        .product-row.best-price .result {
+            background-color: #c8f7c5;
+            border-color: #28a745;
+        }
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            flex: 1;
+            max-width: 200px;
+        }
+        button.add-row {
+            background-color: #28a745;
+            color: white;
+        }
+        button.add-row:hover {
+            background-color: #218838;
+        }
+        button.sort-rows {
+            background-color: #007bff;
+            color: white;
+        }
+        button.sort-rows:hover {
+            background-color: #0056b3;
+        }
+        button.reset-app {
+            background-color: #6c757d;
+            color: white;
+        }
+        button.reset-app:hover {
+            background-color: #5a6268;
+        }
+        button.remove-row {
+            background-color: #dc3545;
+            color: white;
+            padding: 4px 6px; /* Reduced padding for icon-like button */
+            font-size: 1em;
+            margin-left: auto; /* Push to the right */
+            width: auto;
+            max-width: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        button.remove-row:hover {
+            background-color: #c82333;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .install-banner {
+            width: 100%;
+            max-width: 800px;
+            box-sizing: border-box;
+            padding: 10px 20px;
+            margin: 0 0 10px 0;
+            background-color: #0056b3;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            border-radius: 0 0 8px 8px;
+        }
+        .install-banner button {
+            flex: none;
+            max-width: none;
+            background-color: #fff;
+            color: #0056b3;
+            font-weight: bold;
+        }
+        .install-banner .dismiss {
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .grid-header, .product-row {
+                grid-template-columns: repeat(4, 1fr) 40px; /* Further reduce remove button column width */
+                gap: 5px; /* Reduce gap */
+                padding: 5px; /* Reduce padding */
+            }
+            .grid-header div {
+                font-size: 0.7em; /* Smaller header text */
+                text-align: center; /* Center header text */
+            }
+            .product-row input {
+                padding: 5px;
+                font-size: 0.8em;
+            }
+            .product-row .result {
+                font-size: 0.8em;
+                padding: 5px;
+                box-sizing: border-box; /* Ensure consistent box model */
+                display: flex;
+                align-items: center; /* Vertically center text */
+                justify-content: flex-end;
+            }
+            button.remove-row {
+                font-size: 0.7em;
+                padding: 4px; /* Reduced padding for mobile */
+                min-width: 28px; /* Ensure it's not too small */
+                min-height: 28px; /* Ensure it's not too small */
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            .button-group {
+                flex-direction: column; /* Stack buttons */
+                gap: 5px;
+            }
+            button {
+                max-width: 100%; /* Full width buttons */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="install-banner" class="install-banner hidden">
+        <span>Instala la app para usarla sin conexión</span>
+        <div style="display:flex; gap:8px;">
+            <button id="install-btn" type="button">Instalar</button>
+            <button id="dismiss-install-btn" class="dismiss" type="button">Ahora no</button>
+        </div>
+    </div>
+
+    <h1>Comparador de Precios</h1>
+    <div class="container">
+        <div class="product-grid">
+            <div class="grid-header">
+                <div>Precio</div>
+                <div>Cantidad</div>
+                <div>Contenido</div>
+                <div>$ Unitario</div>
+                <div class="remove-header"></div> <!-- For remove button alignment -->
+            </div>
+
+            <!-- Product Row Template (hidden) -->
+            <div class="product-row hidden" id="product-row-template">
+                <input type="number" class="product-price" placeholder="Ej: 1000" inputmode="decimal" min="0">
+                <input type="number" class="product-units" placeholder="Ej: 6" inputmode="decimal" min="0">
+                <input type="number" class="unit-content" placeholder="Ej: 200" inputmode="decimal" min="0">
+                <input type="text" class="result" disabled value="0.00">
+                <button class="remove-row" type="button" aria-label="Eliminar fila" onclick="removeRow(this)">x</button>
+            </div>
+
+            <!-- Initial Product Row -->
+            <div class="product-row">
+                <input type="number" class="product-price" placeholder="Ej: 1000" inputmode="decimal" min="0">
+                <input type="number" class="product-units" placeholder="Ej: 6" inputmode="decimal" min="0">
+                <input type="number" class="unit-content" placeholder="Ej: 200" inputmode="decimal" min="0">
+                <input type="text" class="result" disabled value="0.00">
+                <button class="remove-row" type="button" aria-label="Eliminar fila" onclick="removeRow(this)">x</button>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="add-row" type="button" onclick="addRow()">Agregar</button>
+            <button class="sort-rows" type="button" onclick="sortRows()">Ordenar por Precio</button>
+            <button class="reset-app" type="button" onclick="resetApp()">Resetear</button>
+        </div>
+    </div>
+
+    <script>
+        const productGrid = document.querySelector('.product-grid');
+        const productRowTemplate = document.getElementById('product-row-template');
+        const STORAGE_KEY = 'comparador-precios-rows';
+
+        function setupRowListeners(row) {
+            const inputs = row.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    calculatePrice(row);
+                    highlightBestPrice();
+                    saveState();
+                });
+            });
+            calculatePrice(row); // Initial calculation for new rows
+        }
+
+        function addRow(values) {
+            const newRow = productRowTemplate.cloneNode(true);
+            newRow.classList.remove('hidden');
+            newRow.removeAttribute('id'); // Remove id from cloned row
+            productGrid.appendChild(newRow);
+            setupRowListeners(newRow);
+            if (values) {
+                newRow.querySelector('.product-price').value = values.price ?? '';
+                newRow.querySelector('.product-units').value = values.units ?? '';
+                newRow.querySelector('.unit-content').value = values.content ?? '';
+                calculatePrice(newRow);
+            }
+            highlightBestPrice();
+            saveState();
+            return newRow;
+        }
+
+        function removeRow(button) {
+            const rowToRemove = button.closest('.product-row');
+            // Keep at least one active row (excluding the hidden template)
+            if (productGrid.querySelectorAll('.product-row:not(.hidden)').length > 1) {
+                rowToRemove.remove();
+                highlightBestPrice();
+                saveState();
+            } else {
+                alert('Debe haber al menos una fila de producto.');
+            }
+        }
+
+        function calculatePrice(row) {
+            const price = parseFloat(row.querySelector('.product-price').value) || 0;
+            const units = parseFloat(row.querySelector('.product-units').value) || 0;
+            const content = parseFloat(row.querySelector('.unit-content').value) || 0;
+            const resultInput = row.querySelector('.result');
+
+            let pricePerBaseUnit = 0;
+            if (price > 0 && units > 0 && content > 0) {
+                pricePerBaseUnit = price / (units * content);
+            }
+            resultInput.value = pricePerBaseUnit.toFixed(2); // Display with 2 decimal places
+        }
+
+        function highlightBestPrice() {
+            const rows = Array.from(productGrid.querySelectorAll('.product-row:not(.hidden)'));
+            rows.forEach(row => row.classList.remove('best-price'));
+
+            let bestRow = null;
+            let bestValue = Infinity;
+            rows.forEach(row => {
+                const value = parseFloat(row.querySelector('.result').value);
+                if (value > 0 && value < bestValue) {
+                    bestValue = value;
+                    bestRow = row;
+                }
+            });
+            if (bestRow && rows.length > 1) {
+                bestRow.classList.add('best-price');
+            }
+        }
+
+        function sortRows() {
+            const rows = Array.from(productGrid.querySelectorAll('.product-row:not(.hidden)'));
+
+            rows.sort((a, b) => {
+                const priceA = parseFloat(a.querySelector('.result').value);
+                const priceB = parseFloat(b.querySelector('.result').value);
+                return priceA - priceB;
+            });
+
+            // Re-append sorted rows to the grid
+            rows.forEach(row => productGrid.appendChild(row));
+            saveState();
+        }
+
+        function resetApp() {
+            const activeRows = productGrid.querySelectorAll('.product-row:not(.hidden)');
+
+            // Remove all active rows except the first one
+            for (let i = activeRows.length - 1; i > 0; i--) {
+                activeRows[i].remove();
+            }
+
+            // Clear inputs in the remaining (first) row
+            const firstRow = productGrid.querySelector('.product-row:not(.hidden)');
+            if (firstRow) {
+                firstRow.querySelector('.product-price').value = '';
+                firstRow.querySelector('.product-units').value = '';
+                firstRow.querySelector('.unit-content').value = '';
+                firstRow.querySelector('.result').value = '0.00';
+                calculatePrice(firstRow); // Recalculate if values were changed before clearing
+            } else { // If somehow no rows are left, add one
+                addRow();
+            }
+            highlightBestPrice();
+            saveState();
+        }
+
+        function saveState() {
+            const rows = Array.from(productGrid.querySelectorAll('.product-row:not(.hidden)'));
+            const data = rows.map(row => ({
+                price: row.querySelector('.product-price').value,
+                units: row.querySelector('.product-units').value,
+                content: row.querySelector('.unit-content').value
+            }));
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {
+                // Almacenamiento no disponible (modo privado, cuota, etc.): se ignora silenciosamente.
+            }
+        }
+
+        function loadState() {
+            let data;
+            try {
+                data = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+            } catch (e) {
+                data = null;
+            }
+            if (!Array.isArray(data) || data.length === 0) {
+                return false;
+            }
+
+            const firstRow = productGrid.querySelector('.product-row:not(.hidden)');
+            data.forEach((values, index) => {
+                if (index === 0 && firstRow) {
+                    firstRow.querySelector('.product-price').value = values.price ?? '';
+                    firstRow.querySelector('.product-units').value = values.units ?? '';
+                    firstRow.querySelector('.unit-content').value = values.content ?? '';
+                    calculatePrice(firstRow);
+                } else {
+                    addRow(values);
+                }
+            });
+            return true;
+        }
+
+        // Setup listeners for the initial row
+        document.addEventListener('DOMContentLoaded', () => {
+            const initialRow = document.querySelector('.product-row:not(.hidden)');
+            setupRowListeners(initialRow);
+            loadState();
+            highlightBestPrice();
+        });
+
+        // Registro del Service Worker para funcionamiento offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swUrl = new URL('sw.js', document.baseURI).toString();
+                navigator.serviceWorker.register(swUrl).catch(() => {
+                    // El registro puede fallar en entornos sin soporte; la app sigue funcionando online.
+                });
+            });
+        }
+
+        // Prompt de instalación (beforeinstallprompt)
+        let deferredInstallPrompt = null;
+        const installBanner = document.getElementById('install-banner');
+        const installBtn = document.getElementById('install-btn');
+        const dismissInstallBtn = document.getElementById('dismiss-install-btn');
+
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            deferredInstallPrompt = event;
+            if (!sessionStorage.getItem('installDismissed')) {
+                installBanner.classList.remove('hidden');
+            }
+        });
+
+        installBtn?.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            installBanner.classList.add('hidden');
+        });
+
+        dismissInstallBtn?.addEventListener('click', () => {
+            installBanner.classList.add('hidden');
+            sessionStorage.setItem('installDismissed', '1');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBanner.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
