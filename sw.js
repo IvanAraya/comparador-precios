@@ -1,4 +1,4 @@
-const CACHE_NAME = 'comparador-precios-v1';
+const CACHE_NAME = 'comparador-precios-v2';
 const SCOPE_URL = new URL(self.registration.scope);
 
 const APP_SHELL = [
@@ -34,23 +34,24 @@ self.addEventListener('fetch', (event) => {
     }
 
     event.respondWith(
-        caches.match(request).then(cachedResponse => {
-            const networkFetch = fetch(request)
-                .then(networkResponse => {
-                    if (networkResponse && networkResponse.ok) {
-                        const responseClone = networkResponse.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(request, responseClone));
+        fetch(request)
+            .then(networkResponse => {
+                if (networkResponse && networkResponse.ok) {
+                    const responseClone = networkResponse.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(request, responseClone));
+                }
+                return networkResponse;
+            })
+            .catch(() => {
+                return caches.match(request).then(cachedResponse => {
+                    if (cachedResponse) {
+                        return cachedResponse;
                     }
-                    return networkResponse;
-                })
-                .catch(() => {
                     if (request.mode === 'navigate') {
                         return caches.match(new URL('index.html', SCOPE_URL).toString());
                     }
                     return undefined;
                 });
-
-            return cachedResponse || networkFetch;
-        })
+            })
     );
 });
