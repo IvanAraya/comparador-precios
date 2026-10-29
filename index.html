@@ -230,7 +230,7 @@
     <div class="container">
         <div class="product-grid">
             <div class="grid-header">
-                <div>Precio</div>
+                <div>$ Pack</div>
                 <div>Cantidad</div>
                 <div>Contenido</div>
                 <div>$ Unitario</div>
@@ -309,10 +309,18 @@
             }
         }
 
+        function numberOrDefault(rawValue, defaultValue) {
+            const trimmed = rawValue.trim();
+            if (trimmed === '') {
+                return defaultValue;
+            }
+            return parseFloat(trimmed) || 0;
+        }
+
         function calculatePrice(row) {
             const price = parseFloat(row.querySelector('.product-price').value) || 0;
-            const units = parseFloat(row.querySelector('.product-units').value) || 0;
-            const content = parseFloat(row.querySelector('.unit-content').value) || 0;
+            const units = numberOrDefault(row.querySelector('.product-units').value, 1);
+            const content = numberOrDefault(row.querySelector('.unit-content').value, 1);
             const resultInput = row.querySelector('.result');
 
             let pricePerBaseUnit = 0;
